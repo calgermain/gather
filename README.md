@@ -6,7 +6,7 @@ A phone-first React/Vite app for a shared household meal calendar, recipe librar
 
 - **Week view:** drag a meal card onto another day on desktop; on mobile, open a meal and change its date. Moving a meal updates the selected week's grocery calculation.
 - **Month view:** color-coded calendar (purple = both, red = husband only, blue = you only).
-- **Recipes:** manual recipe entry, saved source URL, ingredients, servings and instructions. URL import saves the link and opens an ingredient-review form; generic recipe extraction needs a server endpoint and is deliberately not faked in the client.
+- **Recipes:** manual recipe entry, saved source URL, ingredients, servings and instructions. URL import retrieves schema.org Recipe JSON-LD through the included server endpoint and opens a review form. Unsupported sites fall back to manual entry with a clear error.
 - **Grocery list:** aggregates normalized ingredient names for cooking events in the selected week, scales quantities by serving count, subtracts compatible pantry inventory, groups by aisle/category, and supports check-off.
 - **Pantry:** add/edit stock quantities, which are deducted from grocery needs.
 - **Leftovers:** mark a meal as leftovers or use “Suggest leftovers” to add a follow-up lunch. Leftover-status meals do not create a second set of grocery requirements.
@@ -52,12 +52,12 @@ This is a functional starter app, not a finished, security-audited production se
 
 - **Household invitations:** currently the second user must be added to `household_members` by a trusted process. Build a verified invite flow before wider use.
 - **Cloud sync:** the starter persists meal/recipe edits and initial pantry saves, and subscribes to realtime meal/recipe changes. Complete upsert/delete/reconciliation for every table, handle concurrent edits, and show explicit sync states before production use.
-- **Recipe import:** arbitrary websites often block browser fetches. Implement a server-side endpoint that retrieves schema.org `Recipe` JSON-LD, validates the target URL to prevent SSRF, rate-limits requests, and returns ingredients for user review. The UI gracefully falls back to manual entry if `/api/recipe` is not implemented.
-- **Ingredient normalization:** current matching is intentionally simple. Add a curated ingredient dictionary, aliases, density/conversion data, package sizes, and tests. Do not assume that a bag, can, or bunch can be converted to a mass or volume without ingredient-specific data.
+- **Recipe import:** arbitrary websites often block browser fetches. The included endpoint validates HTTPS targets and DNS addresses, pins the validated address, revalidates redirects, and bounds page size and request time. Add hosting-level rate limiting before a public launch. Sites without Recipe JSON-LD require manual entry.
+- **Ingredient normalization:** Matching uses conservative aliases, fractions, and compatible mass/volume conversions; incompatible units remain separate. Extend the curated dictionary and ingredient-specific package sizes as needed. Do not assume that a bag, can, or bunch can be converted to a mass or volume without ingredient-specific data.
 - **Leftover accounting:** this starter provides leftover suggestions and excludes meals explicitly marked as leftovers from new ingredient demand. For robust automatic leftover accounting, add a leftover-batch ledger with portions produced, reserved, consumed, and expired; make updates transactional.
 - **Pantry inventory:** pantry deductions require compatible units for correct results. Unconvertible units should be reviewed instead of guessed. Use expiration dates and package units for advanced waste minimization.
 - **Data migration:** local demo data is not automatically migrated to a newly configured Supabase project.
-- **Testing:** add unit tests for ingredient aggregation, conversions, pantry deductions, date boundaries, leftovers, and rescheduling before production use.
+- **Testing:** Run `npm test` for grocery aggregation, serving scaling, unit conversions, fractions, pantry deductions, excluded meals, JSON-LD extraction, and private-address rejection. Browser and live cloud integration testing remain necessary.
 
 ## Core business rules
 
@@ -71,3 +71,11 @@ This is a functional starter app, not a finished, security-audited production se
 ## Suggested next engineering milestone
 
 Finish cloud persistence and household invitations, then move ingredient calculation and leftover-batch updates into tested domain functions. After that, add server-side recipe extraction and package-size-aware recommendations.
+
+## Recipe API deployment
+
+Deploy this repository to **Vercel** to serve both the Vite frontend and `api/recipe.js`. `npm run dev` also serves the endpoint locally. A static-only host (including GitHub Pages) cannot execute this endpoint. If deploying elsewhere, provide an equivalent Node endpoint and set `VITE_RECIPE_API_URL`; cross-origin hosting requires an explicit origin policy on that server. `npm run preview` previews only the built frontend.
+
+Imports support public HTTPS pages containing Recipe JSON-LD, including nested graphs and instruction sections. Review yields (some sites give cookies or loaves instead of servings), ranges, package sizes, and unmeasured ingredients before saving. Unknown quantities are flagged for review, rather than counted as one. Pantry stock is deducted once per compatible ingredient group. Grocery checkmarks now include units, so incompatible rows can be checked independently.
+
+Pantry quantities can be edited by clicking the quantity. Leftover suggestions subtract previously reserved portions and use one diner for individual meals or two for both. This is still a planning aid, not a full inventory-consumption ledger.

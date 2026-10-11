@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildGrocery,convert,normalize,parseIngredient} from '../src/ingredients.js';
+import {extractRecipe,publicAddress} from '../api/recipe.js';
+test('fractions, plurals and safe name matching',()=>{assert.equal(parseIngredient('1 1/2 cups flour').qty,1.5);assert.equal(parseIngredient('½ cup milk').qty,.5);assert.equal(parseIngredient('2 cloves garlic').unit,'clove');assert.equal(convert(1,'cups','tbsp'),16);assert.equal(convert(1,'can','jar'),null);assert.equal(normalize('couscous'),'couscous');});
+const data={meals:[{id:'m',date:'2026-10-12',recipeId:'r',servings:2,status:'planned'}],recipes:[{id:'r',servings:4,ingredients:[{name:'milk',qty:2,unit:'cups'},{name:'milk',qty:8,unit:'tbsp'},{name:'tomatoes',qty:1,unit:'can'},{name:'tomato',qty:2,unit:'each'}]}],pantry:[{name:'milk',qty:8,unit:'tbsp'}],checked:{}};
+test('scale and deduct pantry once; incompatible quantities stay separate',()=>{const g=buildGrocery(data,'2026-10-12');assert.equal(g.rows.find(x=>x.name==='milk').buy,.75);assert.equal(g.rows.filter(x=>normalize(x.name)==='tomato').length,2);assert.ok(g.notices.length);});
+test('leftovers, skipped meals and rescheduling do not add demand',()=>{for(const status of ['leftover','skipped'])assert.equal(buildGrocery({...data,meals:[{...data.meals[0],status}]},'2026-10-12').rows.length,0);assert.equal(buildGrocery(data,'2026-10-19').rows.length,0);});
+test('unknown quantities are flagged rather than invented',()=>{assert.equal(parseIngredient('salt to taste').qty,0);});
+test('extract nested JSON-LD and instruction sections',()=>{const html=`<script type="application/ld+json">${JSON.stringify({'@graph':[{'@type':['Recipe'],name:'Soup',recipeYield:'6 servings',recipeIngredient:['1/2 cup milk'],recipeInstructions:[{'@type':'HowToSection',itemListElement:[{text:'Stir.'}]}]}]})}</script>`;assert.deepEqual(extractRecipe(html),{name:'Soup',servings:6,ingredients:[{qty:.5,unit:'cup',name:'milk'}],instructions:'Stir.'});assert.throws(()=>extractRecipe('<html/>'));});
+test('reject private and loopback addresses',()=>{for(const ip of ['127.0.0.1','10.0.0.1','172.16.0.2','192.168.0.1','169.254.169.254','::1','::ffff:127.0.0.1'])assert.equal(publicAddress(ip),false);assert.equal(publicAddress('8.8.8.8'),true);});
