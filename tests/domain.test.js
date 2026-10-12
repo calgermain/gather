@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildGrocery,convert,normalize,parseIngredient} from '../src/ingredients.js';
-import {extractRecipe,publicAddress} from '../api/recipe.js';
+import {buildGrocery,convert,normalize,parseIngredient,scaleIngredients} from '../src/ingredients.js';
+import {extractRecipe,publicAddress,pinnedLookup} from '../api/recipe.js';
 test('fractions, plurals and safe name matching',()=>{assert.equal(parseIngredient('1 1/2 cups flour').qty,1.5);assert.equal(parseIngredient('½ cup milk').qty,.5);assert.equal(parseIngredient('2 cloves garlic').unit,'clove');assert.equal(convert(1,'cups','tbsp'),16);assert.equal(convert(1,'can','jar'),null);assert.equal(normalize('couscous'),'couscous');});
 const data={meals:[{id:'m',date:'2026-10-12',recipeId:'r',servings:2,status:'planned'}],recipes:[{id:'r',servings:4,ingredients:[{name:'milk',qty:2,unit:'cups'},{name:'milk',qty:8,unit:'tbsp'},{name:'tomatoes',qty:1,unit:'can'},{name:'tomato',qty:2,unit:'each'}]}],pantry:[{name:'milk',qty:8,unit:'tbsp'}],checked:{}};
 test('scale and deduct pantry once; incompatible quantities stay separate',()=>{const g=buildGrocery(data,'2026-10-12');assert.equal(g.rows.find(x=>x.name==='milk').buy,.75);assert.equal(g.rows.filter(x=>normalize(x.name)==='tomato').length,2);assert.ok(g.notices.length);});
@@ -9,3 +9,6 @@ test('leftovers, skipped meals and rescheduling do not add demand',()=>{for(cons
 test('unknown quantities are flagged rather than invented',()=>{assert.equal(parseIngredient('salt to taste').qty,0);});
 test('extract nested JSON-LD and instruction sections',()=>{const html=`<script type="application/ld+json">${JSON.stringify({'@graph':[{'@type':['Recipe'],name:'Soup',recipeYield:'6 servings',recipeIngredient:['1/2 cup milk'],recipeInstructions:[{'@type':'HowToSection',itemListElement:[{text:'Stir.'}]}]}]})}</script>`;assert.deepEqual(extractRecipe(html),{name:'Soup',servings:6,ingredients:[{qty:.5,unit:'cup',name:'milk'}],instructions:'Stir.'});assert.throws(()=>extractRecipe('<html/>'));});
 test('reject private and loopback addresses',()=>{for(const ip of ['127.0.0.1','10.0.0.1','172.16.0.2','192.168.0.1','169.254.169.254','::1','::ffff:127.0.0.1'])assert.equal(publicAddress(ip),false);assert.equal(publicAddress('8.8.8.8'),true);});
+
+test('pinned DNS lookup supports modern Node all-address callbacks',()=>{const addresses=[{address:'8.8.8.8',family:4}];pinnedLookup(addresses)('host',{all:true},(error,result)=>{assert.equal(error,null);assert.deepEqual(result,addresses)});pinnedLookup(addresses)('host',{},(error,address,family)=>{assert.equal(address,'8.8.8.8');assert.equal(family,4)});});
+test('review serving changes scale edited quantities and leave unmeasured ingredients alone',()=>{const items=[{name:'milk',qty:1.5,unit:'cup'},{name:'salt',qty:'',unit:'to taste'}];const doubled=scaleIngredients(items,4,8);assert.equal(doubled[0].qty,3);assert.equal(doubled[1].qty,'');assert.equal(scaleIngredients(doubled,8,4)[0].qty,1.5);assert.equal(items[0].qty,1.5);});

@@ -4,10 +4,11 @@ import { isIP } from 'node:net';
 import { parseIngredient } from '../src/ingredients.js';
 
 export function publicAddress(ip){if(isIP(ip)===6)return /^(2|3)[0-9a-f]{3}:/i.test(ip)&&!/^2001:(db8|0):/i.test(ip);if(isIP(ip)!==4)return false;const [a,b]=ip.split('.').map(Number);return !(a===0||a===10||a===127||a>=224||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&(b===168||b===0))||(a===100&&b>=64&&b<=127)||(a===198&&(b===18||b===19)));}
+export function pinnedLookup(addresses){return (_host,opts,cb)=>opts?.all?cb(null,addresses):cb(null,addresses[0].address,addresses[0].family);}
 async function retrieve(url,redirects=0){
  const target=new URL(url);if(target.protocol!=='https:'||target.username||target.password||(target.port&&target.port!=='443'))throw new Error('Use a public HTTPS recipe URL.');
  const addresses=await lookup(target.hostname,{all:true});if(!addresses.length||addresses.some(x=>!publicAddress(x.address)))throw new Error('This URL is not a public recipe website.');
- return new Promise((resolve,reject)=>{const req=https.get(target,{headers:{'User-Agent':'GatherRecipeImporter/1.0','Accept':'text/html'},lookup:(_host,_opts,cb)=>cb(null,addresses[0].address,addresses[0].family)},res=>{
+ return new Promise((resolve,reject)=>{const req=https.get(target,{headers:{'User-Agent':'GatherRecipeImporter/1.0','Accept':'text/html'},lookup:pinnedLookup(addresses)},res=>{
  if([301,302,303,307,308].includes(res.statusCode)){res.resume();if(redirects>=3||!res.headers.location)return reject(new Error('Too many redirects.'));retrieve(new URL(res.headers.location,target).href,redirects+1).then(resolve,reject);return;}
  if(res.statusCode!==200){res.resume();return reject(new Error('Recipe website blocked the request or is unavailable.'));}
  if(!/text\/html|application\/xhtml/i.test(res.headers['content-type']||'')){res.resume();return reject(new Error('The URL must point to a recipe web page.'));}

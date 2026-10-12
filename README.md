@@ -6,7 +6,7 @@ A phone-first React/Vite app for a shared household meal calendar, recipe librar
 
 - **Week view:** drag a meal card onto another day on desktop; on mobile, open a meal and change its date. Moving a meal updates the selected week's grocery calculation.
 - **Month view:** color-coded calendar (purple = both, red = husband only, blue = you only).
-- **Recipes:** manual recipe entry, saved source URL, ingredients, servings and instructions. URL import retrieves schema.org Recipe JSON-LD through the included server endpoint and opens a review form. Unsupported sites fall back to manual entry with a clear error.
+- **Recipes:** manual recipe entry, saved source URL, ingredients, servings and instructions. New recipe opens a URL-only form with a Manually enter recipe link. Successful import opens a review form with name, ingredient rows, servings and cooking steps. Changing servings scales the visible ingredient quantities; save persists that adjusted yield and quantities together. Manual entry opens the same review form blank. Import failures stay on the URL screen and show an inline explanation.
 - **Grocery list:** aggregates normalized ingredient names for cooking events in the selected week, scales quantities by serving count, subtracts compatible pantry inventory, groups by aisle/category, and supports check-off.
 - **Pantry:** add/edit stock quantities, which are deducted from grocery needs.
 - **Leftovers:** mark a meal as leftovers or use “Suggest leftovers” to add a follow-up lunch. Leftover-status meals do not create a second set of grocery requirements.
@@ -79,3 +79,9 @@ Deploy this repository to **Vercel** to serve both the Vite frontend and `api/re
 Imports support public HTTPS pages containing Recipe JSON-LD, including nested graphs and instruction sections. Review yields (some sites give cookies or loaves instead of servings), ranges, package sizes, and unmeasured ingredients before saving. Unknown quantities are flagged for review, rather than counted as one. Pantry stock is deducted once per compatible ingredient group. Grocery checkmarks now include units, so incompatible rows can be checked independently.
 
 Pantry quantities can be edited by clicking the quantity. Leftover suggestions subtract previously reserved portions and use one diner for individual meals or two for both. This is still a planning aid, not a full inventory-consumption ledger.
+
+## Recipe review flow
+
+Choose New recipe, paste a public HTTPS recipe URL, and select Import and review. Nothing is saved until Save recipe is selected on the review screen. Ingredient quantities, units and names can be edited individually; ingredients can be added or removed. Changing servings rescales measurable quantities; unspecified quantities remain for manual review. The saved serving yield and ingredient quantities stay aligned so grocery scaling does not double-scale them.
+
+The pinned DNS callback supports both single-address and all-address lookup modes used by modern Node runtimes. `npm test` includes component tests for URL entry, mocked imports, inline failure handling, manual entry, and scaling before save, plus the domain tests. A real deployed RecipeTin Eats import still needs verification once deployment access is available.

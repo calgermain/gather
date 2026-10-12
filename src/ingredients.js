@@ -1,4 +1,5 @@
 const aliases = {cups:'cup', tablespoons:'tbsp', tablespoon:'tbsp', teaspoons:'tsp', teaspoon:'tsp', pounds:'lb', pound:'lb', lbs:'lb', ounces:'oz', ounce:'oz', grams:'g', gram:'g', kilograms:'kg', liters:'l', milliliters:'ml', cloves:'clove', cans:'can', jars:'jar', boxes:'box', bags:'bag'};
+export function scaleIngredients(ingredients,from,to){const factor=Number(to)/Number(from);if(!Number.isFinite(factor)||factor<=0)return ingredients;return ingredients.map(i=>({...i,qty:i.qty===''?'':Number((Number(i.qty)*factor).toPrecision(12))}));}
 export const canonicalUnit = u => aliases[String(u||'each').toLowerCase().trim()] || String(u||'each').toLowerCase().trim();
 export function normalize(s){const text=String(s||'').toLowerCase().trim().replace(/\s+/g,' ');return ({carrots:'carrot',onions:'onion','yellow onions':'yellow onion',potatoes:'potato',tomatoes:'tomato',eggs:'egg','garlic cloves':'garlic'})[text]||text;}
 const units={tsp:['volume',4.92892159375],tbsp:['volume',14.78676478125],cup:['volume',236.5882365],ml:['volume',1],l:['volume',1000],oz:['weight',28.349523125],lb:['weight',453.59237],g:['weight',1],kg:['weight',1000]};
