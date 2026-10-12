@@ -85,3 +85,9 @@ Pantry quantities can be edited by clicking the quantity. Leftover suggestions s
 Choose New recipe, paste a public HTTPS recipe URL, and select Import and review. Nothing is saved until Save recipe is selected on the review screen. Ingredient quantities, units and names can be edited individually; ingredients can be added or removed. Changing servings rescales measurable quantities; unspecified quantities remain for manual review. The saved serving yield and ingredient quantities stay aligned so grocery scaling does not double-scale them.
 
 The pinned DNS callback supports both single-address and all-address lookup modes used by modern Node runtimes. `npm test` includes component tests for URL entry, mocked imports, inline failure handling, manual entry, and scaling before save, plus the domain tests. A real deployed RecipeTin Eats import still needs verification once deployment access is available.
+
+## Ingredient normalization
+
+Imports and recipe review use a conservative alias dictionary. For example, `3 large garlic cloves (, minced)` becomes `3 clove Garlic`; the original name is retained alongside the editable ingredient for review. Preparation-only parentheses and suffixes are removed. Size descriptors are removed only when the remaining name is recognized. Garlic powder/paste, onion colors, chicken cuts, coconut milk/cream, unknown qualifiers and mixed ingredients stay distinct.
+
+Grocery aggregation and pantry matching apply the same normalization to existing stored names without requiring a migration. Legacy garlic-clove names also retain clove units; a whole garlic bulb is not converted into cloves. Newly saved pantry entries use the normalized label. Extend `src/ingredientNames.js` with explicit aliases rather than fuzzy matching or guessed unit conversions.
