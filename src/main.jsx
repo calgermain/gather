@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createClient } from '@supabase/supabase-js';
 import { CalendarDays, BookOpen, ShoppingBasket, Package, Sparkles, ChevronLeft, ChevronRight, Plus, Search, Link as LinkIcon, Users, Clock, ArrowLeftRight, Trash2, Check, X, Menu, CalendarRange, ChefHat, RefreshCw, LogIn, LogOut, GripVertical, CircleCheck, Circle, ExternalLink, Cloud, CloudOff } from 'lucide-react';
 import './styles.css';
+import {normalizeIngredient} from './ingredientNames.js';
 import {RecipeStart, RecipeReview} from './RecipeFlow.jsx';
 import { normalize, buildGrocery, category } from './ingredients.js';
 
@@ -61,7 +62,7 @@ function App(){
  async function createHousehold(){if(!supabase||!user)return;const {data:hh,error}=await supabase.from('households').insert({name:householdName,created_by:user.id}).select().single();if(error){setNotice(error.message);return}const {error:e}=await supabase.from('household_members').insert({household_id:hh.id,user_id:user.id,role:'owner'});if(e){setNotice(e.message);return}setData(d=>({...d,household:{id:hh.id,name:hh.name}}));setNotice('Household created. Invite your partner from the Supabase household_members table or add an invite flow next.')}
  function toggleCheck(row){const key=`${weekStart}:${row.id}`;const val=!data.checked?.[key];update(d=>({...d,checked:{...d.checked,[key]:val}}));if(supabase&&user&&data.household.id!=='local-household')cloudUpsert('grocery_checks',{week_start:weekStart,ingredient_key:row.id,checked:val,id:`${data.household.id}-${weekStart}-${row.id}`})}
  function addPantry(){setEditing({id:uid(),name:'',qty:1,unit:'each',category:'Produce'});setModal('pantry')}
- function savePantry(p){update(d=>{const i=d.pantry.findIndex(x=>x.id===p.id);if(i>=0)d.pantry[i]=p;else d.pantry.push(p);return d});if(supabase&&user&&data.household.id!=='local-household')cloudUpsert('pantry_items',{id:p.id,name:p.name,quantity:p.qty,unit:p.unit,category:p.category});setModal(null)}
+ function savePantry(p){p=normalizeIngredient(p);update(d=>{const i=d.pantry.findIndex(x=>x.id===p.id);if(i>=0)d.pantry[i]=p;else d.pantry.push(p);return d});if(supabase&&user&&data.household.id!=='local-household')cloudUpsert('pantry_items',{id:p.id,name:p.name,quantity:p.qty,unit:p.unit,category:p.category});setModal(null)}
  function useLeftover(m){const leftovers=data.meals.filter(x=>x.status==='leftover'&&x.leftoverFrom===m.id);const batch={...m,id:uid(),date:shift(m.date,1),type:'Lunch',title:`Leftover ${m.title}`,status:'leftover',leftoverFrom:m.id,servings:Math.max(1,m.servings-2)};if(leftovers.length){setNotice('A leftover meal is already planned from this batch.');return}saveMeal(batch)}
  function suggestLeftovers(m){const reserved=data.meals.filter(x=>x.leftoverFrom===m.id&&x.status==='leftover').reduce((n,x)=>n+Number(x.servings),0);const remaining=Math.max(0,Number(m.servings)-(m.who==='both'?2:1)-reserved);if(remaining<1){setNotice('Increase servings to create leftover portions.');return}const date=shift(m.date,1);const batch={id:uid(),date,type:'Lunch',recipeId:m.recipeId,title:`Leftover ${m.title}`,who:m.who,servings:remaining,status:'leftover',leftoverFrom:m.id};saveMeal(batch);setNotice(`Suggested leftovers added for ${pretty(date,{weekday:'long'})}.`)}
  function addSuggested(r){addMealFromRecipe(r,selectedDate);}

@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Plus, Trash2} from 'lucide-react';
+import {normalizeIngredient} from './ingredientNames.js';
 import {scaleIngredients} from './ingredients.js';
 
 export function RecipeStart({onReview,onManual}) {
@@ -28,7 +29,7 @@ export function RecipeStart({onReview,onManual}) {
 }
 
 export function RecipeReview({initial,onSave,onDelete,isExisting,onBack}) {
- const [recipe,setRecipe]=useState(()=>({...initial,ingredients:(initial.ingredients||[]).map(i=>({...i}))}));
+ const [recipe,setRecipe]=useState(()=>({...initial,ingredients:(initial.ingredients||[]).map(normalizeIngredient)}));
  const [servingInput,setServingInput]=useState(String(initial.servings||''));
  const [error,setError]=useState('');
  const set=(key,value)=>setRecipe(r=>({...r,[key]:value}));
@@ -48,7 +49,7 @@ export function RecipeReview({initial,onSave,onDelete,isExisting,onBack}) {
   <div className="recipe-ingredient-list">{recipe.ingredients.map((i,index)=><div className="recipe-ingredient-row" key={index}>
    <label>Quantity<input type="number" min="0" step="any" value={i.qty||''} placeholder="To taste" onChange={e=>changeIngredient(index,'qty',e.target.value)}/></label>
    <label>Unit<input value={i.unit} placeholder="cup, lb, each…" onChange={e=>changeIngredient(index,'unit',e.target.value)}/></label>
-   <label>Ingredient<input required value={i.name} placeholder="Ingredient name" onChange={e=>changeIngredient(index,'name',e.target.value)}/></label>
+   <label>Ingredient{i.originalName&&i.originalName!==i.name&&<small className="original-ingredient">Original: {i.originalName}</small>}<input required value={i.name} placeholder="Ingredient name" onChange={e=>changeIngredient(index,'name',e.target.value)}/></label>
    <button type="button" className="icon-btn danger-icon" aria-label={`Remove ingredient ${index+1}`} onClick={()=>set('ingredients',recipe.ingredients.filter((_,n)=>n!==index))}><Trash2 size={16}/></button>
   </div>)}</div>
   <label>Cooking steps<textarea rows="6" value={recipe.instructions||''} onChange={e=>set('instructions',e.target.value)} placeholder="Enter cooking steps, one per line"/></label>
